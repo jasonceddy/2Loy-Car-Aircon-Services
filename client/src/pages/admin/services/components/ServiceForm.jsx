@@ -1,0 +1,188 @@
+import { Controller, useForm } from "react-hook-form"
+import { useState, useEffect } from "react"
+import { LoaderCircle } from "lucide-react"
+import { toast } from "react-toastify"
+import axiosClient from "@/axiosClient"
+import { Switch } from "@/components/ui/switch"
+
+export default function ServiceForm({ setModal, fetchServices, modal }) {
+  const {
+    register,
+    handleSubmit,
+    setError,
+    formState: { isSubmitting, errors },
+    reset,
+    control,
+    setValue, // Add this to set form values
+  } = useForm()
+
+  const [serverError, setServerError] = useState("")
+  const [loadingData, setLoadingData] = useState(false) // For loading existing data
+
+  // Fetch existing service data if editing
+  useEffect(() => {
+    setLoadingData(true)
+    if (modal.service) {
+      // Populate form with existing data
+      setValue("name", modal.service.name)
+      setValue("cost", modal.service.cost.toString())
+      setValue("description", modal.service.description)
+      setValue("allowCustomerTechChoice", modal.service.allowCustomerTechChoice)
+
+      setLoadingData(false)
+    } else {
+      reset()
+      setLoadingData(false)
+    }
+  }, [modal.service, setValue, reset])
+
+  const onSubmit = async (data) => {
+    setServerError("")
+    try {
+      if (modal.service) {
+        // Update existing service
+        await axiosClient.patch(`/services/${modal.service.id}`, data)
+        toast.success("Service updated successfully!")
+      } else {
+        // Create new service
+        await axiosClient.post("/services", data)
+        toast.success("Service added successfully!")
+      }
+
+      reset()
+      await fetchServices()
+      setModal({ service: null, open: false })
+    } catch (error) {
+      if (error.response?.status === 400) {
+        const message = error.response.data.message
+
+        if (typeof message === "object") {
+          Object.entries(message).forEach(([field, msgs]) => {
+            setError(field, { type: "server", message: msgs[0] })
+          })
+        } else {
+          setServerError(message)
+        }
+      } else {
+        toast.error("Something went wrong!")
+      }
+    }
+  }
+
+  // Show loading state while fetching data
+  if (loadingData) {
+    return (
+      <div className="flex items-center justify-center py-8">
+        <LoaderCircle className="animate-spin" />
+      </div>
+    )
+  }
+
+  return (
+    <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
+      {/* existing form fields remain the same */}
+      <div>
+        <label
+          htmlFor="name"
+          className="block mb-2 text-sm font-medium text-gray-900"
+        >
+          Name
+        </label>
+        <input
+          {...register("name")}
+          type="text"
+          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+          placeholder="Enter service name..."
+          required
+        />
+        {errors.name && (
+          <p className="mt-2 text-sm text-red-600">{errors.name.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label
+          htmlFor="cost"
+          className="block mb-2 text-sm font-medium text-gray-900"
+        >
+          Cost
+        </label>
+        <input
+          {...register("cost")}
+          type="number"
+          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+          placeholder="Enter service cost..."
+          required
+        />
+        {errors.cost && (
+          <p className="mt-2 text-sm text-red-600">{errors.cost.message}</p>
+        )}
+      </div>
+
+      <div>
+        <label
+          htmlFor="description"
+          className="block mb-2 text-sm font-medium text-gray-900"
+        >
+          Description
+        </label>
+        <textarea
+          {...register("description")}
+          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5 resize-none"
+          placeholder="Enter service description..."
+          required
+        />
+        {errors.description && (
+          <p className="mt-2 text-sm text-red-600">
+            {errors.description.message}
+          </p>
+        )}
+      </div>
+      <div>
+        <label
+          htmlFor="description"
+          className="block mb-2 text-sm font-medium text-gray-900"
+        >
+          Allow Technician
+        </label>
+        <Controller
+          name="allowCustomerTechChoice"
+          control={control}
+          defaultValue={false}
+          render={({ field }) => (
+            <Switch
+              checked={field.value}
+              onCheckedChange={field.onChange}
+              className="cursor-pointer"
+            />
+          )}
+        />
+        {errors.allowCustomerTechChoice && (
+          <p className="mt-2 text-sm text-red-600">
+            {errors.allowCustomerTechChoice.message}
+          </p>
+        )}
+      </div>
+      <div>
+        <button
+          type="submit"
+          disabled={isSubmitting}
+          className="cursor-pointer w-full text-white bg-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center flex items-center justify-center disabled:bg-gray-700 disabled:cursor-not-allowed"
+        >
+          {
+            isSubmitting ? (
+              <LoaderCircle className="animate-spin" />
+            ) : modal.id ? (
+              "Update"
+            ) : (
+              "Save"
+            ) // Dynamic button text
+          }
+        </button>
+        {serverError && (
+          <p className="text-sm mt-1 text-red-600">{serverError}</p>
+        )}
+      </div>
+    </form>
+  )
+}

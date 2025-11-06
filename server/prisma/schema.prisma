@@ -1,0 +1,252 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+model Pack {
+  id                      Int       @id @default(autoincrement())
+  name                    String
+  price                   Float
+  description             String
+  allowCustomerTechChoice Boolean   @default(true)
+  services                Service[] @relation("PackServices") // Relation to Service
+  hidden                  Boolean   @default(false)
+  createdAt               DateTime  @default(now())
+  updatedAt               DateTime  @updatedAt
+  Booking                 Booking[]
+}
+
+model User {
+  id              Int       @id @default(autoincrement())
+  name            String
+  email           String    @unique
+  phone           String    @unique
+  password        String
+  role            Role      @default(CUSTOMER)
+  available       Boolean   @default(true)
+  cars            Car[]
+  bookings        Booking[]
+  notes           JobNote[]
+  quotes          Quote[]
+  techAssignments Booking[] @relation("TechAssignments")
+  assignments     BookingTechnician[]
+  blocked         Boolean   @default(false)
+  changeRequests   BookingChangeRequest[]
+  notifications    Notification[]
+}
+
+enum Role {
+  CUSTOMER
+  ADMIN
+  TECHNICIAN
+}
+
+model Car {
+  id       Int       @id @default(autoincrement())
+  plateNo  String    @unique
+  brand    String
+  model    String
+  year     String
+  notes    String
+  owner    User      @relation(fields: [ownerId], references: [id])
+  ownerId  Int
+  bookings Booking[]
+}
+
+model Service {
+  id                      Int       @id @default(autoincrement())
+  name                    String
+  cost                    Float
+  description             String
+  allowCustomerTechChoice Boolean   @default(true)
+  bookings                Booking[] // Link to bookings
+  hidden                  Boolean   @default(false)
+  packs                   Pack[]    @relation("PackServices") // Link to packs that include this service
+  createdAt               DateTime  @default(now())
+}
+
+model Booking {
+  id           Int           @id @default(autoincrement())
+  customer     User          @relation(fields: [customerId], references: [id])
+  customerId   Int
+  car          Car           @relation(fields: [carId], references: [id])
+  carId        Int
+  service      Service?      @relation(fields: [serviceId], references: [id])
+  serviceId    Int?
+  technician   User?         @relation("TechAssignments", fields: [technicianId], references: [id])
+  technicianId Int?
+  status       BookingStatus @default(PENDING)
+  rejectReason String?
+  scheduledAt  DateTime
+  jobs         Job[]
+  quote        Quote? // Relation to Quote
+  createdAt    DateTime      @default(now())
+
+  // Customer-editable fields
+  customerNotes    String?   
+  servicePreferences Json?
+
+  // Correct relation to Pack with `fields` and `references`
+  pack   Pack? @relation(fields: [packId], references: [id]) // New relation field to Pack
+  packId Int? // Foreign key field that references Pack
+  changeRequests BookingChangeRequest[]
+  bookingTechnicians BookingTechnician[]
+}
+
+enum BookingStatus {
+  PENDING
+  CONFIRMED
+  CANCELLED
+  REJECTED
+}
+
+model Job {
+  id        Int         @id @default(autoincrement())
+  booking   Booking     @relation(fields: [bookingId], references: [id])
+  bookingId Int
+  stage     JobStage    @default(DIAGNOSTIC)
+  notes     JobNote[]
+  partsUsed PartsUsed[]
+  updatedAt DateTime    @updatedAt
+}
+
+enum JobStage {
+  DIAGNOSTIC
+  REPAIR
+  TESTING
+  COMPLETION
+}
+
+model JobNote {
+  id        Int      @id @default(autoincrement())
+  job       Job      @relation(fields: [jobId], references: [id])
+  jobId     Int
+  author    User     @relation(fields: [authorId], references: [id])
+  authorId  Int
+  content   String
+  createdAt DateTime @default(now())
+}
+
+model Part {
+  id        Int            @id @default(autoincrement())
+  name      String
+  price     Float          @default(0)
+  stock     Int            @default(0)
+  threshold Int            @default(5) // low stock warning
+  logs      InventoryLog[]
+  partsUsed PartsUsed[]
+}
+
+model InventoryLog {
+  id        Int       @id @default(autoincrement())
+  part      Part      @relation(fields: [partId], references: [id])
+  partId    Int
+  type      StockType
+  quantity  Int
+  createdAt DateTime  @default(now())
+}
+
+enum StockType {
+  IN
+  OUT
+}
+
+model PartsUsed {
+  id       Int  @id @default(autoincrement())
+  job      Job  @relation(fields: [jobId], references: [id])
+  jobId    Int
+  part     Part @relation(fields: [partId], references: [id])
+  partId   Int
+  quantity Int
+}
+
+model Quote {
+  id         Int         @id @default(autoincrement())
+  customer   User        @relation(fields: [customerId], references: [id])
+  customerId Int
+  booking    Booking     @relation(fields: [bookingId], references: [id]) // One-to-one relation to Booking
+  bookingId  Int         @unique // One-to-one constraint
+  details    String
+  total      Float
+  status     QuoteStatus @default(PENDING)
+  billing    Billing?
+  createdAt  DateTime    @default(now())
+}
+
+enum QuoteStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Billing {
+  id        Int           @id @default(autoincrement())
+  quote     Quote         @relation(fields: [quoteId], references: [id])
+  quoteId   Int           @unique
+  total     Float
+  status    BillingStatus @default(UNPAID)
+  payments  Payment[]
+  createdAt DateTime      @default(now())
+}
+
+enum BillingStatus {
+  UNPAID
+  PAID
+}
+
+model Payment {
+  id        Int      @id @default(autoincrement())
+  billing   Billing  @relation(fields: [billingId], references: [id])
+  billingId Int
+  amount    Float
+  method    String
+  paidAt    DateTime @default(now())
+}
+
+model BookingChangeRequest {
+  id           Int      @id @default(autoincrement())
+  booking      Booking  @relation(fields: [bookingId], references: [id])
+  bookingId    Int
+  requester    User     @relation(fields: [requesterId], references: [id])
+  requesterId  Int
+  requestedAt  DateTime
+  status       ChangeRequestStatus @default(PENDING)
+  reason       String?
+  createdAt    DateTime @default(now())
+}
+
+enum ChangeRequestStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+model Notification {
+  id        Int      @id @default(autoincrement())
+  user      User     @relation(fields: [userId], references: [id])
+  userId    Int
+  title     String
+  message   String
+  read      Boolean  @default(false)
+  meta      Json?
+  createdAt DateTime @default(now())
+}
+
+model BookingTechnician {
+  id           Int     @id @default(autoincrement())
+  booking      Booking @relation(fields: [bookingId], references: [id])
+  bookingId    Int
+  technician   User    @relation(fields: [technicianId], references: [id])
+  technicianId Int
+  assignedAt   DateTime @default(now())
+}
