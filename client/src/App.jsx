@@ -47,6 +47,7 @@ import BookAService, {
 import BookAPackage, {
   loader as BookPackageLoader,
 } from "./pages/customer/book/BookAPackage";
+import Cars from "./pages/admin/cars/Cars";
 function App() {
   const router = createBrowserRouter([
     {
@@ -124,6 +125,10 @@ function App() {
           path: "users",
           element: <User />,
           loader: UserListLoader,
+        },
+        {
+          path: "cars",
+          element: <Cars />,
         },
         {
           path: "customers",

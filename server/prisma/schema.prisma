@@ -27,22 +27,27 @@ model Pack {
 }
 
 model User {
-  id              Int       @id @default(autoincrement())
-  name            String
-  email           String    @unique
-  phone           String    @unique
-  password        String
-  role            Role      @default(CUSTOMER)
-  available       Boolean   @default(true)
-  cars            Car[]
-  bookings        Booking[]
-  notes           JobNote[]
-  quotes          Quote[]
-  techAssignments Booking[] @relation("TechAssignments")
-  assignments     BookingTechnician[]
-  blocked         Boolean   @default(false)
-  changeRequests   BookingChangeRequest[]
-  notifications    Notification[]
+  id                     Int                    @id @default(autoincrement())
+  name                   String
+  email                  String                 @unique
+  phone                  String                 @unique
+  password               String
+  role                   Role                   @default(CUSTOMER)
+  available              Boolean                @default(true)
+  cars                   Car[]
+  ownerships             CarOwnership[]
+  bookings               Booking[]
+  notes                  JobNote[]
+  quotes                 Quote[]
+  techAssignments        Booking[]              @relation("TechAssignments")
+  assignments            BookingTechnician[]
+  blocked                Boolean                @default(false)
+  changeRequests         BookingChangeRequest[]
+  notifications          Notification[]
+  // transfer relations (audit)
+  adminTransfers         TransferLog[]          @relation("AdminTransfers")
+  previousOwnerTransfers TransferLog[]          @relation("PrevOwner")
+  newOwnerTransfers      TransferLog[]          @relation("NewOwner")
 }
 
 enum Role {
@@ -52,15 +57,49 @@ enum Role {
 }
 
 model Car {
+  id             Int            @id @default(autoincrement())
+  plateNo        String         @unique
+  brand          String
+  model          String
+  year           String
+  notes          String
+  owner          User           @relation(fields: [ownerId], references: [id])
+  ownerId        Int
+  // timestamp of the most recent ownership change (keeps service history intact)
+  ownerChangedAt DateTime?
+  bookings       Booking[]
+  ownerships     CarOwnership[]
+  transferLogs   TransferLog[]
+}
+
+model CarOwnership {
   id       Int       @id @default(autoincrement())
-  plateNo  String    @unique
-  brand    String
-  model    String
-  year     String
-  notes    String
+  car      Car       @relation(fields: [carId], references: [id])
+  carId    Int
   owner    User      @relation(fields: [ownerId], references: [id])
   ownerId  Int
-  bookings Booking[]
+  fromDate DateTime  @default(now())
+  toDate   DateTime?
+}
+
+model TransferLog {
+  id                 Int      @id @default(autoincrement())
+  car                Car      @relation(fields: [carId], references: [id])
+  carId              Int
+  admin              User     @relation("AdminTransfers", fields: [adminId], references: [id])
+  adminId            Int
+  previousOwner      User?    @relation("PrevOwner", fields: [previousOwnerId], references: [id])
+  previousOwnerId    Int?
+  newOwner           User     @relation("NewOwner", fields: [newOwnerId], references: [id])
+  newOwnerId         Int
+  reason             String?
+  // flexible details for audit (moved ids, effective transfer date, etc.)
+  details            Json?
+  moveOpenJobs       Boolean  @default(false)
+  moveUnpaidInvoices Boolean  @default(false)
+  movedJobsCount     Int?
+  movedInvoicesCount Int?
+  createdAt          DateTime @default(now())
 }
 
 model Service {
@@ -93,13 +132,13 @@ model Booking {
   createdAt    DateTime      @default(now())
 
   // Customer-editable fields
-  customerNotes    String?   
+  customerNotes      String?
   servicePreferences Json?
 
   // Correct relation to Pack with `fields` and `references`
-  pack   Pack? @relation(fields: [packId], references: [id]) // New relation field to Pack
-  packId Int? // Foreign key field that references Pack
-  changeRequests BookingChangeRequest[]
+  pack               Pack?                  @relation(fields: [packId], references: [id]) // New relation field to Pack
+  packId             Int? // Foreign key field that references Pack
+  changeRequests     BookingChangeRequest[]
   bookingTechnicians BookingTechnician[]
 }
 
@@ -214,15 +253,15 @@ model Payment {
 }
 
 model BookingChangeRequest {
-  id           Int      @id @default(autoincrement())
-  booking      Booking  @relation(fields: [bookingId], references: [id])
-  bookingId    Int
-  requester    User     @relation(fields: [requesterId], references: [id])
-  requesterId  Int
-  requestedAt  DateTime
-  status       ChangeRequestStatus @default(PENDING)
-  reason       String?
-  createdAt    DateTime @default(now())
+  id          Int                 @id @default(autoincrement())
+  booking     Booking             @relation(fields: [bookingId], references: [id])
+  bookingId   Int
+  requester   User                @relation(fields: [requesterId], references: [id])
+  requesterId Int
+  requestedAt DateTime
+  status      ChangeRequestStatus @default(PENDING)
+  reason      String?
+  createdAt   DateTime            @default(now())
 }
 
 enum ChangeRequestStatus {
@@ -243,10 +282,10 @@ model Notification {
 }
 
 model BookingTechnician {
-  id           Int     @id @default(autoincrement())
-  booking      Booking @relation(fields: [bookingId], references: [id])
+  id           Int      @id @default(autoincrement())
+  booking      Booking  @relation(fields: [bookingId], references: [id])
   bookingId    Int
-  technician   User    @relation(fields: [technicianId], references: [id])
+  technician   User     @relation(fields: [technicianId], references: [id])
   technicianId Int
   assignedAt   DateTime @default(now())
 }

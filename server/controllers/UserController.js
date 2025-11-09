@@ -1,6 +1,5 @@
 import { comparePassword, hashingPassword } from "./AuthController.js"
 import { prisma } from "../server.js"
-import bcrypt from "bcryptjs"
 export async function getTechnicians(req, res) {
   try {
     const technicians = await prisma.user.findMany({
@@ -123,11 +122,21 @@ export async function getUsers(req, res) {
       prisma.user.count({ where }),
     ])
 
-    // Add status field based on booking count for backward compatibility
-    const usersWithStatus = users.map((user) => ({
-      ...user,
-      status: user.role || (user._count.bookings > 0 ? "Customer" : "User"),
-    }))
+    // Add status field for UI: map internal role and booking activity to friendly status
+    const usersWithStatus = users.map((user) => {
+      let status = "User"
+      // explicit role mapping first
+      if (user.role === "ADMIN") status = "Admin"
+      else if (user.role === "TECHNICIAN") status = "Technician"
+      else if (user.role === "CUSTOMER") status = "Customer"
+
+      // if role is a generic "USER" or unset, promote to Customer when they have bookings
+      if ((user.role === "USER" || !user.role) && (user._count?.bookings || 0) > 0) {
+        status = "Customer"
+      }
+
+      return { ...user, status }
+    })
 
     res.status(200).json({
       data: usersWithStatus,
@@ -234,7 +243,7 @@ export async function getAllTechnicians(req, res) {
 }
 export async function createUser(req, res) {
   try {
-    const { name, email, phone, role } = req.body
+    const { name, email, phone, role, password } = req.body
 
     // check duplicates
     const existingEmail = await prisma.user.findUnique({ where: { email } })
@@ -247,26 +256,45 @@ export async function createUser(req, res) {
       return res.status(400).json({ message: "Phone number already exists" })
     }
 
-    // 🔑 force password to secret1234
-    const hashedPassword = await bcrypt.hash("secret1234", 10)
+    // Hash provided password or fallback to default secret1234
+    const plainPassword = password || "secret1234"
+    const hashedPassword = await hashingPassword(plainPassword)
 
-    const newUser = await prisma.user.create({
+    // Ensure correct role (TECHNICIAN or CUSTOMER)
+    const assignedRole = role ? role.toUpperCase() : "TECHNICIAN"
+    if (!["TECHNICIAN", "CUSTOMER", "ADMIN"].includes(assignedRole)) {
+      return res.status(400).json({ message: "Invalid role provided" })
+    }
+
+    const created = await prisma.user.create({
       data: {
         name,
         email,
         phone,
-        password: hashedPassword,   // hashed secret1234
-        role: role || "TECHNICIAN", // default TECHNICIAN
+        password: hashedPassword,
+        role: assignedRole,
         blocked: false,
+      },
+      select: {
+        id: true,
+        name: true,
+        email: true,
+        phone: true,
+        role: true,
+        blocked: true,
       },
     })
 
-    res.status(201).json({ message: "Technician created", user: newUser })
+    res.status(201).json({
+      message: `${assignedRole === "CUSTOMER" ? "Customer" : "User"} created successfully`,
+      user: created,
+    })
   } catch (error) {
     console.error(error)
     res.status(500).json({ message: "Something went wrong" })
   }
 }
+
 //Update User
 export async function updateMe(req, res) {
   try {
@@ -323,12 +351,14 @@ export async function getCustomers(req, res) {
       }
     }
 
-    // Base where clause for customers (CUSTOMER role) with at least one booking
+    // Base where clause for customers (CUSTOMER role)
+    // NOTE: previously this required users to have at least one booking
+    // (bookings: { some: {} }) — that prevented newly created customers
+    // (without bookings) from appearing in the admin customers list.
+    // We remove the bookings requirement so admins can see all customers
+    // including those with zero bookings.
     const where = {
       role: "CUSTOMER",
-      bookings: {
-        some: {}, // Users with at least one booking
-      },
       ...searchWhere,
     }
 
@@ -381,6 +411,26 @@ export async function getCustomers(req, res) {
   }
 }
 
+// Get cars owned by a specific user (admin only)
+export async function getUserCars(req, res) {
+  try {
+    const { id } = req.params
+    const userId = parseInt(id)
+
+    const cars = await prisma.car.findMany({
+      where: { ownerId: userId },
+      include: {
+        owner: { select: { id: true, name: true, email: true, phone: true } },
+      },
+    })
+
+    res.status(200).json({ data: cars })
+  } catch (err) {
+    console.error(err)
+    res.status(500).json({ message: "Something went wrong" })
+  }
+}
+
 // Edit User
 export async function editUser(req, res) {
   try {
@@ -416,13 +466,20 @@ export async function editUser(req, res) {
       }
     }
 
+    const updateData = {
+      ...(name && { name }),
+      ...(email && { email }),
+      ...(phone && { phone }),
+    }
+
+    // allow admin to update password for the user (hash before saving)
+    if (req.body.password) {
+      updateData.password = await hashingPassword(req.body.password)
+    }
+
     const updatedUser = await prisma.user.update({
       where: { id: parseInt(id) },
-      data: {
-        ...(name && { name }),
-        ...(email && { email }),
-        ...(phone && { phone }),
-      },
+      data: updateData,
       select: {
         id: true,
         name: true,
@@ -435,6 +492,7 @@ export async function editUser(req, res) {
 
     res.status(200).json({
       message: "User updated successfully",
+      user: updatedUser,
     })
   } catch (err) {
     console.error(err)

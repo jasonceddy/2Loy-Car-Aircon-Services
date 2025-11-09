@@ -1,10 +1,11 @@
 import { Router } from "express"
-import { authenticateUser } from "../middlewares/AuthMiddleware.js"
+import { authenticateUser, authorizePermissions } from "../middlewares/AuthMiddleware.js"
 import {
   getTechnicians,
   getUsers,
   getAllTechnicians,
   getCustomers,
+  getUserCars,
   editUser,
   blockUser,
   unblockUser,
@@ -27,6 +28,9 @@ router.get("/users", getUsers)
 router.patch("/edit", validate(editUserSchema), editOwnDetails)
 router.get("/all-technicians", getAllTechnicians)
 router.get("/customers", getCustomers)
+
+// Admin: get cars for a specific user
+router.get("/:id/cars", authorizePermissions("ADMIN"), getUserCars)
 
 // existing
 router.post("/", createUser)

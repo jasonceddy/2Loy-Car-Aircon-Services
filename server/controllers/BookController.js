@@ -108,10 +108,14 @@ export async function createBook(req, res) {
       }
     }
 
+    // Allow consult-only bookings: if bookingMode is 'consult' we permit no serviceIds/packIds
     if (!serviceIds && !packIds) {
-      return res
-        .status(400)
-        .json({ message: "Either serviceIds or packIds must be provided." });
+      const isConsultOnly = servicePreferences && servicePreferences.bookingMode === 'consult'
+      if (!isConsultOnly) {
+        return res
+          .status(400)
+          .json({ message: "Either serviceIds or packIds must be provided." });
+      }
     }
 
     const createdBookings = []
@@ -161,6 +165,23 @@ export async function createBook(req, res) {
 
     if (packIds) {
       for (const packId of packIds) {
+        // fetch pack and validate technician choice if provided
+        const pack = await prisma.pack.findUnique({ where: { id: packId } })
+        if (!pack) {
+          return res.status(404).json({ error: "Pack not found" })
+        }
+
+        if ((pack.allowCustomerTechChoice === false || pack.allowCustomerTechChoice === null) && technicianId) {
+          return res.status(400).json({ message: "Technician cannot be chosen for this package" })
+        }
+
+        if (pack.allowCustomerTechChoice && technicianId) {
+          const existingBooking = await checkTechnicianAvailability(technicianId, effectiveScheduledAt)
+          if (existingBooking) {
+            return res.status(400).json({ message: "Technician is not available on the selected date" })
+          }
+        }
+
         const created = await prisma.booking.create({
           data: {
             customerId: userId,
@@ -174,6 +195,19 @@ export async function createBook(req, res) {
         createdBookings.push(created)
       }
     }
+
+      // If this is a consult-only booking (no serviceIds/packIds provided), create a generic booking record
+      if (createdBookings.length === 0 && servicePreferences && servicePreferences.bookingMode === 'consult') {
+        const created = await prisma.booking.create({
+          data: {
+            customerId: userId,
+            carId,
+            scheduledAt: new Date(effectiveScheduledAt),
+            ...(servicePreferences !== undefined && { servicePreferences }),
+          },
+        })
+        createdBookings.push(created)
+      }
 
     // If this was a consultation booking, notify all admins so they can see it under /admin/consultations
     try {
@@ -302,10 +336,11 @@ export async function getBookings(req, res) {
               id: true,
               name: true,
               email: true,
+              available: true,
             },
           },
           bookingTechnicians: {
-            include: { technician: { select: { id: true, name: true, email: true } } }
+            include: { technician: { select: { id: true, name: true, email: true, available: true } } }
           },
           customer: {
             select: {
@@ -515,6 +550,10 @@ export async function assignTechnician(req, res) {
 export async function confirmBooking(req, res) {
   try {
     const { id } = req.params
+    // Only admins may confirm bookings (defense-in-depth; routes also protect this)
+    if (req.user?.role !== "ADMIN") {
+      return res.status(403).json({ message: "Only admins may confirm bookings" })
+    }
     const booking = await prisma.booking.update({
       where: { id: parseInt(id) },
       data: { status: "CONFIRMED" },
@@ -540,8 +579,18 @@ export async function cancelBooking(req, res) {
     if (!booking) return res.status(404).json({ message: 'Booking not found' })
 
     // Only owner or admin can cancel
-    if (req.user.role === 'CUSTOMER' && booking.customerId !== req.user.userId) {
-      return res.status(403).json({ message: 'Not authorized to cancel this booking' })
+    if (req.user.role === 'CUSTOMER') {
+      if (booking.customerId !== req.user.userId) {
+        return res.status(403).json({ message: 'Not authorized to cancel this booking' })
+      }
+
+      // Disallow cancellation if any technician has been assigned (primary or via bookingTechnicians)
+      const bk = await prisma.booking.findUnique({ where: { id: bookingId }, include: { bookingTechnicians: true } })
+      const hasPrimaryTech = !!bk.technicianId
+      const hasAssignedTechs = (bk.bookingTechnicians || []).length > 0
+      if (hasPrimaryTech || hasAssignedTechs) {
+        return res.status(400).json({ message: 'Booking cannot be cancelled after a technician has been assigned' })
+      }
     }
 
     const updated = await prisma.booking.update({ where: { id: bookingId }, data: { status: "CANCELLED" } })
@@ -694,6 +743,23 @@ export async function rejectBooking(req, res) {
       where: { id: parseInt(id) },
       data: { status: "REJECTED", rejectReason: reason },
     })
+    // Notify the booking customer about the rejection (safe, best-effort)
+    try {
+      if (booking && booking.customerId) {
+        await prisma.notification.create({
+          data: {
+            userId: booking.customerId,
+            title: `Booking #${booking.id} rejected`,
+            message: reason || `Your booking #${booking.id} was rejected by the admin.`,
+            meta: { bookingId: booking.id },
+            read: false,
+          },
+        })
+      }
+    } catch (notifyErr) {
+      console.error('Failed to notify customer about rejection', notifyErr)
+    }
+
     res.status(200).json({ message: "Booking rejected successfully" })
   } catch (err) {
     console.error(err)
@@ -769,8 +835,20 @@ export async function approveChangeRequest(req, res) {
       }
     }
 
-    // Update booking scheduledAt
-    await prisma.booking.update({ where: { id: bookingId }, data: { scheduledAt: change.requestedAt } })
+    // Update booking scheduledAt and return the updated booking
+    const updatedBooking = await prisma.booking.update({ where: { id: bookingId }, data: { scheduledAt: change.requestedAt },
+      include: {
+        car: true,
+        service: true,
+        pack: true,
+        technician: { select: { id: true, name: true, email: true } },
+        bookingTechnicians: { include: { technician: { select: { id: true, name: true, email: true } } } },
+        customer: { select: { id: true, name: true, email: true, phone: true } },
+        jobs: { include: { notes: { include: { author: { select: { name: true } } } }, partsUsed: { include: { part: true } } } },
+        quote: { include: { billing: { include: { payments: true } } } },
+        changeRequests: { include: { requester: { select: { id: true, name: true, email: true } } } },
+      }
+    })
 
     // mark change request approved
     await prisma.bookingChangeRequest.update({ where: { id: change.id }, data: { status: "APPROVED" } })
@@ -789,7 +867,21 @@ export async function approveChangeRequest(req, res) {
       console.error("Failed to create notification", e)
     }
 
-    res.status(200).json({ message: "Change request approved and booking updated" })
+    // Create notification for the booking customer
+    try {
+      await prisma.notification.create({
+        data: {
+          userId: booking.customerId,
+          title: "Booking reschedule approved",
+          message: `Your booking #${bookingId} has been rescheduled to ${new Date(change.requestedAt).toLocaleString()}`,
+          meta: { bookingId, changeRequestId: change.id },
+        },
+      })
+    } catch (e) {
+      console.error("Failed to create notification", e)
+    }
+
+    res.status(200).json({ message: "Change request approved and booking updated", data: updatedBooking })
   } catch (err) {
     console.error(err)
     res.status(500).json({ error: "Something went wrong" })

@@ -86,11 +86,17 @@ export default function RegisterForm() {
           Email
         </label>
         <input
-          {...register("email")}
+          {...register("email", {
+            required: "Please enter your email",
+            pattern: {
+              // simple, commonly used email regex to catch most invalid inputs
+              value: /^[^\s@]+@[^\s@]+\.[^\s@]+$/,
+              message: "Invalid email address",
+            },
+          })}
           type="email"
           className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
           placeholder="Enter email..."
-          required
         />
         {errors.email && (
           <p className="mt-2 text-sm text-red-600">{errors.email.message}</p>

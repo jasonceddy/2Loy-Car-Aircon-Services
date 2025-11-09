@@ -139,6 +139,22 @@ export function AdminSidebar() {
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
+                    to="/admin/cars"
+                    className={
+                      location.pathname === "/admin/cars"
+                        ? "bg-sidebar-accent"
+                        : ""
+                    }
+                  >
+                    <Briefcase />
+                    <span>Vehicles</span>
+                  </Link>
+                </SidebarMenuButton>
+              </SidebarMenuItem>
+
+              <SidebarMenuItem>
+                <SidebarMenuButton asChild>
+                  <Link
                     to="/admin/bookings"
                     className={
                       location.pathname === "/admin/bookings"

@@ -13,19 +13,20 @@ import { formatCurrency } from '@/lib/formatter';
 import { useLoaderData, useNavigate } from "react-router-dom";
 import axiosClient from "@/axiosClient";
 import { toast } from "react-toastify";
-import { Switch } from '@/components/ui/switch'
 
 export async function loader() {
     const cars = await axiosClient.get("/cars/my-cars");
     const packages = await axiosClient.get("/packs");
-    return { cars: cars.data, packages: packages.data };
+    const technicians = await axiosClient.get("/users/technicians");
+    return { cars: cars.data, packages: packages.data, technicians: technicians.data };
 }
 
 export default function BookAPackage() {
-    const { cars, packages } = useLoaderData();
+    const { cars, packages, technicians } = useLoaderData();
     const [date, setDate] = useState();
     const [selectedCar, setSelectedCar] = useState(null);
     const [selectedPackage, setSelectedPackage] = useState(null);
+    const [selectedTechnician, setSelectedTechnician] = useState(null)
     const [time, setTime] = useState("");
     const navigate = useNavigate();
 
@@ -51,8 +52,9 @@ export default function BookAPackage() {
         ? (() => {
               const pkgPrice = Number(selectedPackage.price ?? selectedPackage.cost ?? 0);
               if (!isNaN(pkgPrice) && pkgPrice > 0) return pkgPrice;
+              const servicesList = Array.isArray(selectedPackage.services) ? selectedPackage.services : [];
               return (
-                  selectedPackage.services?.reduce((acc, s) => {
+                  servicesList.reduce((acc, s) => {
                       const p = Number(s.price ?? s.cost ?? 0);
                       return acc + (isNaN(p) ? 0 : p);
                   }, 0) ?? 0
@@ -74,14 +76,15 @@ export default function BookAPackage() {
         return { ok: true }
     }
 
-    const handleBookNow = async () => {
-            if (!selectedCar || (bookingMode !== 'consult' && !selectedPackage)) {
-                toast.error("Please fill in all required fields and select a package.");
-                return;
-            }
+    const handleBookNow = async (modeParam) => {
+        const mode = modeParam ?? bookingMode;
+        if (!selectedCar || (mode !== 'consult' && !selectedPackage)) {
+            toast.error("Please fill in all required fields and select a package.");
+            return;
+        }
 
         let scheduledDateTime
-        if (bookingMode === 'consult') {
+        if (mode === 'consult') {
             scheduledDateTime = new Date()
         } else {
             if (!date || !time) {
@@ -102,15 +105,16 @@ export default function BookAPackage() {
         try {
             const bookingData = {
                 carId: parseInt(selectedCar),
-                packIds: [selectedPackage.id],
+                ...(selectedPackage ? { packIds: [selectedPackage.id] } : {}),
+                ...(selectedPackage && selectedPackage.services && selectedPackage.services.some(s => s.allowCustomerTechChoice) && selectedTechnician && { technicianId: parseInt(selectedTechnician) }),
                 scheduledAt: scheduledDateTime.toISOString(),
-                servicePreferences: { bookingMode: bookingMode }
+                servicePreferences: { bookingMode: mode }
             };
             console.log("Sending bookingData:", bookingData);
             const res = await axiosClient.post("/bookings", bookingData);
             console.log("Booking response:", res.data);
 
-            if (bookingMode === 'consult') {
+            if (mode === 'consult') {
                 toast.success("Consultation created. Admins have been notified.")
                 navigate("/customer")
             } else {
@@ -220,6 +224,25 @@ export default function BookAPackage() {
                                     </Card>
                                 ))}
                             </div>
+                            {/* Technician selector if package contains services that allow choosing technician */}
+                            {selectedPackage && selectedPackage.services && selectedPackage.services.some(s => s.allowCustomerTechChoice) && (
+                                <div className="mt-4">
+                                    <label className="block mb-2 text-sm font-medium text-gray-900">Preferred Technician (optional)</label>
+                                    <Select onValueChange={(val) => setSelectedTechnician(val)}>
+                                        <SelectTrigger className="bg-gray-50 border text-gray-900 rounded-lg w-full">
+                                            <SelectValue placeholder="Select Technician..." />
+                                        </SelectTrigger>
+                                        <SelectContent>
+                                            <SelectGroup>
+                                                <SelectLabel>Technicians</SelectLabel>
+                                                {technicians.technicians.map((tech) => (
+                                                    <SelectItem key={tech.id} value={tech.id.toString()}>{tech.name}</SelectItem>
+                                                ))}
+                                            </SelectGroup>
+                                        </SelectContent>
+                                    </Select>
+                                </div>
+                            )}
                         </div>
                     ) : (
                         <div className="mt-5 p-4 bg-yellow-50 rounded">
@@ -262,10 +285,11 @@ export default function BookAPackage() {
                                 <p>No package selected.</p>
                             )}
                         </div>
-                        <Separator />
-                        <div>
-                            <h3 className="font-bold">Date & Time:</h3>
-                            <p>{date ? format(date, "PPP") : "Not set"} @ {time || "Not set"}</p>
+                        <div className="flex items-start justify-between gap-4">
+                            <div className="flex-1">
+                                <h3 className="font-bold">Date & Time:</h3>
+                                <p>{date ? format(date, "PPP") : "Not set"} @ {time || "Not set"}</p>
+                            </div>
                         </div>
                         <Separator />
                         <div>
@@ -278,13 +302,29 @@ export default function BookAPackage() {
                         </div>
                         <div>
                             <h3 className="font-bold">Mode:</h3>
-                            <div className="flex gap-4 items-center mt-2">
-                                <span>Book now</span>
-                                <Switch checked={bookingMode === 'consult'} onCheckedChange={(val) => setBookingMode(val ? 'consult' : 'book')} />
-                                <span>Consult now</span>
+                            <div className="flex gap-2 items-center mt-2">
+                                <Button
+                                    className={cn(
+                                        "px-3 py-1 rounded bg-white border text-gray-900 hover:bg-gray-100",
+                                        bookingMode === 'book' ? 'ring-2 ring-blue-500' : ''
+                                    )}
+                                    onClick={() => { setBookingMode('book'); handleBookNow('book'); }}
+                                    aria-pressed={bookingMode === 'book'}
+                                >
+                                    Book now
+                                </Button>
+                                <Button
+                                    className={cn(
+                                        "px-3 py-1 rounded bg-white border text-gray-900 hover:bg-gray-100",
+                                        bookingMode === 'consult' ? 'ring-2 ring-blue-500' : ''
+                                    )}
+                                    onClick={() => { setBookingMode('consult'); handleBookNow('consult'); }}
+                                    aria-pressed={bookingMode === 'consult'}
+                                >
+                                    Consult now
+                                </Button>
                             </div>
                         </div>
-                        <Button className="w-full" onClick={handleBookNow}>{bookingMode === 'consult' ? 'Consult Now' : 'Book Now'}</Button>
                     </CardContent>
                 </Card>
             </div>

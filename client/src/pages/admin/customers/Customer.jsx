@@ -31,6 +31,7 @@ import {
   Undo,
   UserCheck,
 } from "lucide-react"
+  import { Plus } from "lucide-react"
 import { useEffect, useState } from "react"
 import { useLoaderData } from "react-router-dom"
 import { toast } from "react-toastify"
@@ -121,6 +122,13 @@ export default function Customers() {
             <UserCheck />
             Customers
           </h1>
+            <button
+              onClick={() => setModal((prev) => ({ ...prev, open: true, user: null }))}
+              className="text-md lg:text-lg flex items-center gap-1 bg-black text-white py-2 px-4 rounded-md cursor-pointer hover:bg-black/70 hover:scale-105 duration-200"
+            >
+              <Plus />
+              Customer
+            </button>
         </section>
         <section className="flex-1 flex flex-col">
           <div className="flex items-center gap-5 max-[390px]:flex-col max-[390px]:items-start">
