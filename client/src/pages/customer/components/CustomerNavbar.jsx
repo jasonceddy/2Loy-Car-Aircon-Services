@@ -25,18 +25,23 @@ export default function CustomerNavbar() {
       console.log(error)
     }
   }
+
   const { name, role } = useCustomer()
   const allowedRoles = ["CUSTOMER", "ADMIN", "TECHNICIAN"]
+
   return (
     <header className="p-4">
       <nav className="max-w-full mx-auto flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-gradient-to-r from-white/30 via-blue-50/10 to-white/20 backdrop-blur-lg border border-white/10 shadow-lg">
         <div className="flex items-center gap-3">
           <SidebarTrigger className={"hidden md:block"} />
           <Link to={"/customer"} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center shadow-md">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 12h6l2 6 6-12h4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
+            {/* Logo Image */}
+            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center shadow-md overflow-hidden">
+              <img
+                src="/2loy.png"
+                alt="2LOY Logo"
+                className="w-full h-full object-cover"
+              />
             </div>
             <div className="leading-tight">
               <div className="text-base font-bold text-slate-900">2LOY</div>
@@ -44,14 +49,27 @@ export default function CustomerNavbar() {
             </div>
           </Link>
         </div>
+
         <div className="flex items-center gap-3">
-          {allowedRoles.includes(role) && <NotificationsDropdown iconClass="text-black" />}
+          {allowedRoles.includes(role) && (
+            <NotificationsDropdown iconClass="text-black" />
+          )}
           <DropdownMenu>
             <DropdownMenuTrigger asChild>
-              <div className="flex items-center gap-2 px-2 py-1 hover:bg-slate-100  cursor-pointer rounded-md transition">
+              <div className="flex items-center gap-2 px-2 py-1 hover:bg-slate-100 cursor-pointer rounded-md transition">
                 <Avatar>
                   <AvatarFallback className="bg-blue-700 flex items-center justify-center ring-2 ring-white/40">
-                    <svg xmlns="http://www.w3.org/2000/svg" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <svg
+                      xmlns="http://www.w3.org/2000/svg"
+                      width="18"
+                      height="18"
+                      viewBox="0 0 24 24"
+                      fill="none"
+                      stroke="white"
+                      strokeWidth="1.5"
+                      strokeLinecap="round"
+                      strokeLinejoin="round"
+                    >
                       <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" />
                       <circle cx="12" cy="7" r="4" />
                     </svg>
@@ -94,3 +112,4 @@ export default function CustomerNavbar() {
     </header>
   )
 }
+

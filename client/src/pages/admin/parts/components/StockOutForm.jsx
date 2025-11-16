@@ -74,7 +74,7 @@ export default function StockOutForm({
           {isSubmitting ? (
             <LoaderCircle className="animate-spin" />
           ) : (
-            "Stock In"
+            "Stock Out"
           )}
         </button>
         {serverError && (

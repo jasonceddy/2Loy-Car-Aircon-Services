@@ -23,11 +23,10 @@ export default function Navbar() {
     { id: "contact", label: "Contact", icon: Phone },
   ]
 
-  // Scroll to section function
   const scrollToSection = (sectionId) => {
     const element = document.getElementById(sectionId)
     if (element) {
-      const headerOffset = 80 // Account for sticky navbar height
+      const headerOffset = 80
       const elementPosition = element.getBoundingClientRect().top
       const offsetPosition = elementPosition + window.pageYOffset - headerOffset
 
@@ -38,11 +37,10 @@ export default function Navbar() {
     }
   }
 
-  // Track active section based on scroll position
   useEffect(() => {
     const handleScroll = () => {
       const sections = navItems.map((item) => item.id)
-      const scrollPosition = window.scrollY + 100 // Offset for better detection
+      const scrollPosition = window.scrollY + 100
 
       for (let i = sections.length - 1; i >= 0; i--) {
         const section = document.getElementById(sections[i])
@@ -53,10 +51,9 @@ export default function Navbar() {
       }
     }
 
-    // Only add scroll listener on homepage
     if (location.pathname === "/") {
       window.addEventListener("scroll", handleScroll)
-      handleScroll() // Check initial position
+      handleScroll()
     }
 
     return () => {
@@ -67,6 +64,8 @@ export default function Navbar() {
   return (
     <header className="bg-gray-700 w-full flex flex-col items-center sticky top-0 z-50">
       <nav className="py-4 flex flex-col w-[65vw] max-[1100px]:w-full max-[1100px]:px-5 gap-5">
+
+        {/* TOP BAR — BRAND + BUTTONS */}
         <div className="flex items-center justify-between w-full text-white">
           <Link
             to={"/"}
@@ -74,6 +73,7 @@ export default function Navbar() {
           >
             2Loy <span className="max-[550px]:hidden">Car Aircon</span> Services
           </Link>
+
           <div className="flex items-center gap-2">
             <Link
               to="/register"
@@ -81,6 +81,7 @@ export default function Navbar() {
             >
               Register
             </Link>
+
             <Link
               to="/login"
               className="bg-gray-200 text-gray-700 p-2 rounded-md flex items-center justify-center w-20 max-[550px]:w-15 max-[550px]:text-sm text-center font-semibold hover:bg-gray-300 transition-colors"
@@ -90,6 +91,7 @@ export default function Navbar() {
           </div>
         </div>
 
+        {/* MID NAV — only on home page */}
         {location.pathname === "/" && (
           <div className="flex items-center gap-5 text-white overflow-x-auto">
             {navItems.map((item) => {
@@ -113,10 +115,12 @@ export default function Navbar() {
             })}
           </div>
         )}
-        {/* Show notifications only inside app areas: customer, admin, technician */}
-        {['/customer', '/admin', '/technician'].some(p => location.pathname.startsWith(p)) && (
-          <NotificationsDropdown />
-        )}
+
+        {/* Notifications container */}
+        {["/customer", "/admin", "/technician"].some((p) =>
+          location.pathname.startsWith(p)
+        ) && <NotificationsDropdown />}
+
       </nav>
     </header>
   )

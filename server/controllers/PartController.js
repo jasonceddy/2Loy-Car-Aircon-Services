@@ -1,28 +1,66 @@
 import { prisma } from "../server.js"
 export async function createPart(req, res) {
-  const { name, stock, threshold, price } = req.body
-  const part = await prisma.part.create({
-    data: {
-      name,
-      price: parseFloat(price || 0),
-      stock: parseInt(stock),
-      threshold: parseInt(threshold),
-    },
-  })
+  try {
+    const { name, stock, threshold, price, uom, serialNumber } = req.body
 
-  res.status(201).json({ message: "Part created successfully", data: part })
+    const part = await prisma.part.create({
+      data: {
+        name,
+        uom: uom || "pc",                     // default fallback
+        serialNumber: serialNumber || null,   // unique, nullable
+        price: parseFloat(price || 0),
+        stock: parseInt(stock),
+        threshold: parseInt(threshold),
+      },
+    })
+
+    res.status(201).json({ message: "Part created successfully", data: part })
+  } catch (error) {
+    console.log(error)
+
+    if (error.code === "P2002") {
+      return res.status(400).json({
+        message: {
+          serialNumber: ["Serial number already exists"],
+        },
+      })
+    }
+
+    res.status(500).json({ message: "Server error" })
+  }
 }
 
+// UPDATE PART
 export async function updatePart(req, res) {
-  const { id } = req.params
-  const { name, threshold, price } = req.body
+  try {
+    const { id } = req.params
+    const { name, threshold, price, uom, serialNumber } = req.body
 
-  const part = await prisma.part.update({
-    where: { id: parseInt(id) },
-    data: { name, threshold, ...(price !== undefined && { price: parseFloat(price) }) },
-  })
+    const part = await prisma.part.update({
+      where: { id: parseInt(id) },
+      data: {
+        name,
+        uom: uom || "pc",
+        serialNumber: serialNumber || null,
+        threshold: parseInt(threshold),
+        ...(price !== undefined && { price: parseFloat(price) }),
+      },
+    })
 
-  res.status(200).json({ message: "Part updated successfully", data: part })
+    res.status(200).json({ message: "Part updated successfully", data: part })
+  } catch (error) {
+    console.log(error)
+
+    if (error.code === "P2002") {
+      return res.status(400).json({
+        message: {
+          serialNumber: ["Serial number already exists"],
+        },
+      })
+    }
+
+    res.status(500).json({ message: "Server error" })
+  }
 }
 
 export async function stockIn(req, res) {

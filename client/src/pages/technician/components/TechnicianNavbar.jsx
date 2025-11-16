@@ -30,11 +30,13 @@ export default function TechnicianNavbar() {
       <nav className="max-w-full mx-auto flex items-center justify-between gap-4 px-4 py-3 rounded-xl bg-gradient-to-r from-white/30 via-blue-50/10 to-white/20 backdrop-blur-lg border border-white/10 shadow-lg">
         <div className="flex items-center gap-3">
           <Link to={"/tech"} className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center shadow-md">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 12h6l2 6 6-12h4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <div className="w-10 h-10 rounded-full overflow-hidden shadow-md">
+                <img
+                  src="/2loy.png"
+                  alt="2LOY Logo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
             <div className="leading-tight">
               <div className="text-base font-bold text-slate-900">2LOY</div>
               <div className="text-xs text-slate-600">Car Aircon Services</div>

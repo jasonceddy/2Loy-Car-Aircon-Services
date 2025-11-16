@@ -130,13 +130,13 @@ export default function BookAPackage() {
     return (
         <main className="flex-1 p-10 border-t bg-gray-100/50 flex gap-10">
             <div className="w-2/3">
-                <h1 className="text-2xl font-bold mb-5">Book a Package</h1>
+                <h1 className="text-2xl font-bold mb-5">Package Booking</h1>
                 <div className="space-y-5">
                     <div>
-                        <label className="font-bold">Select Your Car</label>
+                        <label className="font-bold">Select Your Vehicle</label>
                         <Select onValueChange={setSelectedCar}>
                             <SelectTrigger>
-                                <SelectValue placeholder="Select a car..." />
+                                <SelectValue placeholder="Select your vehicle..." />
                             </SelectTrigger>
                             <SelectContent>
                                 <SelectGroup>

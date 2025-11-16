@@ -47,6 +47,7 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Manage Users</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -66,6 +67,7 @@ export function AdminSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -81,6 +83,7 @@ export function AdminSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -99,6 +102,7 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Manage Activities</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -119,7 +123,6 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              {/* New Menu Item for Packs */}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -136,22 +139,7 @@ export function AdminSidebar() {
                 </SidebarMenuButton>
               </SidebarMenuItem>
 
-              <SidebarMenuItem>
-                <SidebarMenuButton asChild>
-                  <Link
-                    to="/admin/cars"
-                    className={
-                      location.pathname === "/admin/cars"
-                        ? "bg-sidebar-accent"
-                        : ""
-                    }
-                  >
-                    <Briefcase />
-                    <span>Vehicles</span>
-                  </Link>
-                </SidebarMenuButton>
-              </SidebarMenuItem>
-
+              {/* BOOKING stays */}
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -167,6 +155,7 @@ export function AdminSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -182,6 +171,7 @@ export function AdminSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -197,6 +187,7 @@ export function AdminSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -212,6 +203,7 @@ export function AdminSidebar() {
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
+
               <SidebarMenuItem>
                 <SidebarMenuButton asChild>
                   <Link
@@ -230,6 +222,7 @@ export function AdminSidebar() {
             </SidebarMenu>
           </SidebarGroupContent>
         </SidebarGroup>
+
         <SidebarGroup>
           <SidebarGroupLabel>Logs</SidebarGroupLabel>
           <SidebarGroupContent>
@@ -245,7 +238,7 @@ export function AdminSidebar() {
                     }
                   >
                     <Calendar />
-                    <span>Logs</span>
+                    <span>Transactional Logs</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>
@@ -256,3 +249,4 @@ export function AdminSidebar() {
     </Sidebar>
   )
 }
+

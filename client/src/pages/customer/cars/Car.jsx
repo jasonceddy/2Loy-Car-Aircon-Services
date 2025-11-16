@@ -110,14 +110,14 @@ export default function Car() {
         <section className="flex items-center justify-between">
           <h1 className="text-xl lg:text-2xl flex items-center gap-2 font-bold">
             <CarIcon />
-            Cars
+            Vehicle
           </h1>
           <button
             onClick={() => setModal((prev) => ({ ...prev, open: true }))}
             className="text-md lg:text-lg flex items-center gap-1 bg-black text-white py-2 px-4 rounded-md cursor-pointer hover:bg-black/70 hover:scale-105 duration-200"
           >
             <Plus />
-            Car
+            Vehicle
           </button>
         </section>
         <section className="flex-1 flex flex-col">

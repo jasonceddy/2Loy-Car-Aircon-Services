@@ -21,13 +21,7 @@ export default function Hero() {
         </Link>
       </div>
       {/* Proof Bar */}
-      <div className="flex items-center gap-4text-gray-300 text-sm">
-        <span>Since 2009</span>
-        <span className="text-gray-500">•</span>
-        <span>7 Skilled Technicians</span>
-        <span className="text-gray-500">•</span>
-        <span>Real-time Tracking</span>
-      </div>
+      
     </section>
   )
 }

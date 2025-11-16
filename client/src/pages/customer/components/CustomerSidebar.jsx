@@ -62,7 +62,7 @@ export function CustomerSidebar() {
                     }
                   >
                     <Car />
-                    <span>Cars</span>
+                    <span>Vehicles</span>
                   </Link>
                 </SidebarMenuButton>
               </SidebarMenuItem>

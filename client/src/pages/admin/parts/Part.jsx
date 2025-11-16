@@ -34,8 +34,8 @@ import {
   Plus,
   PlusCircle,
   Wrench,
-  X,
 } from "lucide-react"
+
 import { useEffect, useState } from "react"
 import { useLoaderData } from "react-router-dom"
 import { toast } from "react-toastify"
@@ -51,19 +51,16 @@ export async function loader() {
 
 export default function Part() {
   const initialData = useLoaderData()
-  const [data, setData] = useState(initialData) //mapping the data
-  const [search, setSearch] = useState("") //search filter
-  const [filter, setFilter] = useState("id_desc") //filters
-  const [loading, setLoading] = useState(false) //loading state
-  const [currentPage, setCurrentPage] = useState(1) //pagination
-  const [modal, setModal] = useState({
-    part: null,
-    open: false,
-  })
+  const [data, setData] = useState(initialData)
+  const [search, setSearch] = useState("")
+  const [filter, setFilter] = useState("id_desc")
+  const [loading, setLoading] = useState(false)
+  const [currentPage, setCurrentPage] = useState(1)
+
+  const [modal, setModal] = useState({ part: null, open: false })
   const [stockInModal, setStockInModal] = useState({ id: null, open: false })
   const [stockOutModal, setStockOutModal] = useState({ id: null, open: false })
 
-  //function to fetch filtered data
   const fetchParts = async (searchTerm = "", sortBy = "", page = 1) => {
     setLoading(true)
     try {
@@ -71,24 +68,23 @@ export default function Part() {
       if (searchTerm) params.append("search", searchTerm)
       if (sortBy) params.append("sort", sortBy)
       params.append("page", page.toString())
+
       const res = await axiosClient.get(`/parts?${params.toString()}`)
       setData(res.data)
     } catch (error) {
-      toast.error(`Error fetching parts`, error)
+      toast.error("Error fetching parts")
     } finally {
       setLoading(false)
     }
   }
-  //Debounce search
+
   useEffect(() => {
     const timeoutId = setTimeout(() => {
       fetchParts(search, filter, currentPage)
     }, 300)
-
     return () => clearTimeout(timeoutId)
   }, [search, filter, currentPage])
 
-  // Reset to page 1 when search or filter changes
   useEffect(() => {
     setCurrentPage(1)
   }, [search, filter])
@@ -106,28 +102,31 @@ export default function Part() {
             <Wrench />
             Parts
           </h1>
+
           <button
             onClick={() => setModal((prev) => ({ ...prev, open: true }))}
             className="text-md lg:text-lg flex items-center gap-1 bg-black text-white py-2 px-4 rounded-md cursor-pointer hover:bg-black/70 hover:scale-105 duration-200"
           >
             <Plus />
-            Part
+            Part 
           </button>
         </section>
+
         <section className="flex-1 flex flex-col">
           <div className="flex items-center gap-5 max-[400px]:flex-col max-[400px]:items-start">
             <div className="flex flex-col">
-              <label htmlFor="search">Search:</label>
+              <label>Search:</label>
               <input
                 type="text"
                 placeholder="Enter search..."
-                className="border-1 border-black rounded-md bg-white py-1 px-2 "
+                className="border-1 border-black rounded-md bg-white py-1 px-2"
                 value={search}
                 onChange={(e) => setSearch(e.target.value)}
               />
             </div>
+
             <div className="flex flex-col">
-              <label htmlFor="filter">Filter:</label>
+              <label>Filter:</label>
               <Select value={filter} onValueChange={setFilter}>
                 <SelectTrigger className="py-1 px-2 border-1 border-black rounded-md">
                   <SelectValue placeholder="Select a filter..." />
@@ -145,21 +144,25 @@ export default function Part() {
               </Select>
             </div>
           </div>
+
           <div className="flex-1 flex flex-col">
             <Table className="mt-5">
               <TableHeader>
                 <TableRow>
+                  <TableHead>Part Description</TableHead>
                   <TableHead>Price</TableHead>
-                  <TableHead>Name</TableHead>
+                  <TableHead>UoM</TableHead>
+                  <TableHead>Serial</TableHead>
                   <TableHead>Stock</TableHead>
                   <TableHead className="max-[400px]:hidden">Status</TableHead>
                   <TableHead></TableHead>
                 </TableRow>
               </TableHeader>
+
               <TableBody>
                 {loading ? (
                   <TableRow>
-                    <TableCell colSpan={4} className="text-center">
+                    <TableCell colSpan={7} className="text-center">
                       <Loader2 className="animate-spin" />
                     </TableCell>
                   </TableRow>
@@ -169,13 +172,20 @@ export default function Part() {
                       <TableCell className="font-medium max-w-sm truncate">
                         {d.name}
                       </TableCell>
+
                       <TableCell>
                         {d.price ? `₱${d.price.toFixed(2)}` : "₱0.00"}
                       </TableCell>
+
+                      <TableCell>{d.uom || "pc"}</TableCell>
+
+                      <TableCell>{d.serialNumber || "—"}</TableCell>
+
                       <TableCell>{d.stock}</TableCell>
+
                       <TableCell className="max-[400px]:hidden">
                         {d.stock === 0 ? (
-                          <span className=" text-red-500  font-bold flex items-center gap-1">
+                          <span className="text-red-500 font-bold flex items-center gap-1">
                             <FileX />
                             Out of stock
                           </span>
@@ -191,47 +201,40 @@ export default function Part() {
                           </span>
                         )}
                       </TableCell>
+
                       <TableCell>
                         <DropdownMenu>
                           <DropdownMenuTrigger>
                             <MoreVertical className="cursor-pointer" />
                           </DropdownMenuTrigger>
+
                           <DropdownMenuContent>
                             <DropdownMenuItem
-                              onClick={() => {
-                                setStockInModal((prev) => ({
-                                  ...prev,
-                                  open: true,
-                                  id: d.id,
-                                }))
-                              }}
+                              onClick={() =>
+                                setStockInModal({ id: d.id, open: true })
+                              }
                               className="cursor-pointer flex items-center gap-1"
                             >
                               <PlusCircle />
                               Stock In
                             </DropdownMenuItem>
+
                             <DropdownMenuItem
-                              onClick={() => {
-                                setStockOutModal((prev) => ({
-                                  ...prev,
-                                  open: true,
-                                  id: d.id,
-                                }))
-                              }}
+                              onClick={() =>
+                                setStockOutModal({ id: d.id, open: true })
+                              }
                               className="cursor-pointer flex items-center gap-1"
                             >
                               <MinusCircle />
                               Stock Out
                             </DropdownMenuItem>
+
                             <DropdownMenuSeparator />
+
                             <DropdownMenuItem
-                              onClick={() => {
-                                setModal((prev) => ({
-                                  ...prev,
-                                  open: true,
-                                  part: d,
-                                }))
-                              }}
+                              onClick={() =>
+                                setModal({ open: true, part: d })
+                              }
                               className="cursor-pointer flex items-center justify-center"
                             >
                               Edit
@@ -244,27 +247,28 @@ export default function Part() {
                 )}
               </TableBody>
             </Table>
+
             <div className="flex items-center justify-between mt-5 w-full">
               <p className="italic">
                 Showing {data.data?.length || 0} of {data.count || 0} results
               </p>
 
               {data.totalPages > 1 && (
-                <div>
-                  <PartPagination
-                    data={data}
-                    currentPage={currentPage}
-                    setCurrentPage={setCurrentPage}
-                  />
-                </div>
+                <PartPagination
+                  data={data}
+                  currentPage={currentPage}
+                  setCurrentPage={setCurrentPage}
+                />
               )}
             </div>
           </div>
         </section>
       </main>
+
       {modal.open && (
         <PartModal setModal={setModal} fetchParts={fetchParts} modal={modal} />
       )}
+
       {stockInModal.open && (
         <StockInModal
           setStockInModal={setStockInModal}
@@ -272,6 +276,7 @@ export default function Part() {
           stockInModal={stockInModal}
         />
       )}
+
       {stockOutModal.open && (
         <StockOutModal
           setStockOutModal={setStockOutModal}

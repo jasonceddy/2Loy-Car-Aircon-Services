@@ -1,8 +1,16 @@
-import { useForm } from "react-hook-form"
+import { useForm, Controller } from "react-hook-form"
 import { useState, useEffect } from "react"
 import { LoaderCircle } from "lucide-react"
 import { toast } from "react-toastify"
 import axiosClient from "@/axiosClient"
+
+import {
+  Select,
+  SelectTrigger,
+  SelectValue,
+  SelectContent,
+  SelectItem,
+} from "@/components/ui/select"
 
 export default function PartForm({ setModal, fetchParts, modal }) {
   const {
@@ -11,24 +19,28 @@ export default function PartForm({ setModal, fetchParts, modal }) {
     setError,
     formState: { isSubmitting, errors },
     reset,
-    setValue, // Add this to set form values
+    setValue,
+    control,
   } = useForm()
 
   const [serverError, setServerError] = useState("")
-  const [loadingData, setLoadingData] = useState(false) // For loading existing data
+  const [loadingData, setLoadingData] = useState(false)
 
-  // Fetch existing service data if editing
+  // Load existing data when editing
   useEffect(() => {
     setLoadingData(true)
+
     if (modal.part) {
-      // Populate form with existing data
       setValue("name", modal.part.name)
       setValue("threshold", modal.part.threshold.toString())
       setValue("price", (modal.part.price ?? 0).toString())
+      setValue("uom", modal.part.uom || "pc")
+      setValue("serialNumber", modal.part.serialNumber || "")
 
       setLoadingData(false)
     } else {
       reset()
+      setValue("uom", "pc")
       setLoadingData(false)
     }
   }, [modal.part, setValue, reset])
@@ -37,11 +49,11 @@ export default function PartForm({ setModal, fetchParts, modal }) {
     setServerError("")
     try {
       if (modal.part) {
-        // Update existing service
+        // UPDATE
         await axiosClient.patch(`/parts/${modal.part.id}`, data)
         toast.success("Part updated successfully!")
       } else {
-        // Create new service
+        // CREATE
         await axiosClient.post("/parts", data)
         toast.success("Part added successfully!")
       }
@@ -66,7 +78,6 @@ export default function PartForm({ setModal, fetchParts, modal }) {
     }
   }
 
-  // Show loading state while fetching data
   if (loadingData) {
     return (
       <div className="flex items-center justify-center py-8">
@@ -77,18 +88,16 @@ export default function PartForm({ setModal, fetchParts, modal }) {
 
   return (
     <form onSubmit={handleSubmit(onSubmit)} className="space-y-4 md:space-y-6">
-      {/* existing form fields remain the same */}
+
+      {/* NAME */}
       <div>
-        <label
-          htmlFor="name"
-          className="block mb-2 text-sm font-medium text-gray-900"
-        >
+        <label className="block mb-2 text-sm font-medium text-gray-900">
           Name
         </label>
         <input
           {...register("name")}
           type="text"
-          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 w-full"
           placeholder="Enter part name..."
           required
         />
@@ -97,18 +106,16 @@ export default function PartForm({ setModal, fetchParts, modal }) {
         )}
       </div>
 
+      {/* STOCK (CREATE ONLY) */}
       {!modal.part && (
         <div>
-          <label
-            htmlFor="stock"
-            className="block mb-2 text-sm font-medium text-gray-900"
-          >
+          <label className="block mb-2 text-sm font-medium text-gray-900">
             Stock
           </label>
           <input
             {...register("stock")}
             type="number"
-            className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+            className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 w-full"
             placeholder="Enter stock..."
             required
           />
@@ -118,18 +125,16 @@ export default function PartForm({ setModal, fetchParts, modal }) {
         </div>
       )}
 
+      {/* PRICE */}
       <div>
-        <label
-          htmlFor="price"
-          className="block mb-2 text-sm font-medium text-gray-900"
-        >
+        <label className="block mb-2 text-sm font-medium text-gray-900">
           Price
         </label>
         <input
           {...register("price")}
           type="number"
           step="0.01"
-          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 w-full"
           placeholder="Enter part price..."
           required
         />
@@ -138,42 +143,90 @@ export default function PartForm({ setModal, fetchParts, modal }) {
         )}
       </div>
 
+      {/* UOM DROPDOWN */}
       <div>
-        <label
-          htmlFor="threshold"
-          className="block mb-2 text-sm font-medium text-gray-900"
-        >
+        <label className="block mb-2 text-sm font-medium text-gray-900">
+          Unit of Measurement (UoM)
+        </label>
+
+        <Controller
+          name="uom"
+          control={control}
+          defaultValue="pc"
+          render={({ field }) => (
+            <Select value={field.value} onValueChange={field.onChange}>
+              <SelectTrigger className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5">
+                <SelectValue placeholder="Select..." />
+              </SelectTrigger>
+
+              <SelectContent>
+                <SelectItem value="pc">pc (piece)</SelectItem>
+                <SelectItem value="set">set</SelectItem>
+                <SelectItem value="bottle">bottle</SelectItem>
+                <SelectItem value="can">can</SelectItem>
+                <SelectItem value="meter">meter</SelectItem>
+                <SelectItem value="roll">roll</SelectItem>
+              </SelectContent>
+            </Select>
+          )}
+        />
+
+        {errors.uom && (
+          <p className="mt-2 text-sm text-red-600">{errors.uom.message}</p>
+        )}
+      </div>
+
+      {/* SERIAL NUMBER */}
+      <div>
+        <label className="block mb-2 text-sm font-medium text-gray-900">
+          Serial Number (Optional)
+        </label>
+        <input
+          {...register("serialNumber")}
+          type="text"
+          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 w-full"
+          placeholder="Enter serial number..."
+        />
+        {errors.serialNumber && (
+          <p className="mt-2 text-sm text-red-600">
+            {errors.serialNumber.message}
+          </p>
+        )}
+      </div>
+
+      {/* THRESHOLD */}
+      <div>
+        <label className="block mb-2 text-sm font-medium text-gray-900">
           Threshold
         </label>
         <input
           {...register("threshold")}
           type="number"
-          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg focus:ring-primary-600 focus:border-primary-600 block w-full p-2.5"
+          className="bg-gray-50 border border-gray-300 text-gray-900 rounded-lg p-2.5 w-full"
           placeholder="Enter threshold..."
           required
         />
         {errors.threshold && (
-          <p className="mt-2 text-sm text-red-600">
-            {errors.threshold.message}
-          </p>
+          <p className="mt-2 text-sm text-red-600">{errors.threshold.message}</p>
         )}
       </div>
+
+      {/* BUTTON */}
       <div>
         <button
           type="submit"
           disabled={isSubmitting}
-          className="cursor-pointer w-full text-white bg-gray-600 hover:bg-gray-700 focus:ring-4 focus:outline-none focus:ring-gray-300 font-medium rounded-lg text-sm px-5 py-2.5 text-center flex items-center justify-center disabled:bg-gray-700 disabled:cursor-not-allowed"
+          className="w-full text-white bg-gray-600 hover:bg-gray-700 font-medium rounded-lg text-sm px-5 py-2.5 flex items-center justify-center disabled:bg-gray-700"
         >
-          {
-            isSubmitting ? (
-              <LoaderCircle className="animate-spin" />
-            ) : modal.part ? (
-              "Update"
-            ) : (
-              "Save"
-            ) // Dynamic button text
-          }
+          {isSubmitting ? (
+            <LoaderCircle className="animate-spin" />
+          ) : modal.part ? (
+            "Update"
+          ) : (
+            "Save"
+          )}
         </button>
+
         {serverError && (
           <p className="text-sm mt-1 text-red-600">{serverError}</p>
         )}
@@ -181,3 +234,4 @@ export default function PartForm({ setModal, fetchParts, modal }) {
     </form>
   )
 }
+

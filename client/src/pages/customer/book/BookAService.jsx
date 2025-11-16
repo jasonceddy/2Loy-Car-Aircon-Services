@@ -158,11 +158,11 @@ export default function BookAService() {
     return (
         <main className="flex-1 p-10 border-t bg-gray-100/50 flex gap-10">
             <div className="w-2/3">
-                <h1 className="text-2xl font-bold mb-5">Book a Service</h1>
+                <h1 className="text-2xl font-bold mb-5">Service Booking</h1>
                 <div className="space-y-5">
                     <div>
                         {/* Vehicle selector lists plateNo or VIN (fallback to brand/model) */}
-                        <VehicleSelector cars={cars.data} onChange={setSelectedCar} placeholder="Select a car..." />
+                        <VehicleSelector cars={cars.data} onChange={setSelectedCar} placeholder="Select your vehicle..." />
                     </div>
                     {/* Car service history - compact, read-only summary shown when a vehicle is selected */}
                     {selectedCar && (

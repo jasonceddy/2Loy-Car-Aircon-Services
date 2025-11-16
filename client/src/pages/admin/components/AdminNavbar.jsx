@@ -32,11 +32,13 @@ export default function AdminNavbar() {
           <SidebarTrigger className={"hidden md:block"} />
           <Link to={"/admin"} className="flex items-center gap-3">
             {/* Small SVG monogram */}
-            <div className="w-10 h-10 rounded-full bg-gradient-to-br from-blue-600 to-cyan-400 flex items-center justify-center shadow-md">
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-                <path d="M3 12h6l2 6 6-12h4" stroke="white" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-              </svg>
-            </div>
+            <div className="w-10 h-10 rounded-full overflow-hidden shadow-md">
+                <img
+                  src="/2loy.png"
+                  alt="2LOY Logo"
+                  className="w-full h-full object-cover"
+                />
+              </div>
             <div className="leading-tight">
               <div className="text-base font-bold text-slate-900">2LOY</div>
               <div className="text-xs text-slate-600">Car Aircon Services</div>
