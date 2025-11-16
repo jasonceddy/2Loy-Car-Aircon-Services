@@ -5,8 +5,8 @@ export const carSchema = z.object({
     .string()
     .min(1, "Please enter a plate number")
     .regex(
-      /^[A-Za-z]{3}-[0-9]{3}$/,
-      "Plate number must be in format: 3 letters - 3 numbers (e.g., ABC-123)"
+      /^[A-Za-z]{3}-[0-9]{4}$/,
+      "Plate number must be in format: 3 letters - 4 numbers (e.g., ABC-1234)"
     )
     .transform((val) => val.toUpperCase()),
   brand: z.string().min(1, "Please enter a brand name"),

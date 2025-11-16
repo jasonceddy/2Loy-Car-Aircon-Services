@@ -575,29 +575,47 @@ export async function confirmBooking(req, res) {
 export async function cancelBooking(req, res) {
   try {
     const bookingId = parseInt(req.params.id) || req.body.bookingId
-    const booking = await prisma.booking.findUnique({ where: { id: bookingId } })
-    if (!booking) return res.status(404).json({ message: 'Booking not found' })
+
+    if (!bookingId || Number.isNaN(bookingId)) {
+      return res.status(400).json({ message: "Invalid booking id" })
+    }
+
+    // Get booking with technicians in one query
+    const booking = await prisma.booking.findUnique({
+      where: { id: bookingId },
+      include: { bookingTechnicians: true },
+    })
+
+    if (!booking) {
+      return res.status(404).json({ message: "Booking not found" })
+    }
 
     // Only owner or admin can cancel
-    if (req.user.role === 'CUSTOMER') {
+    if (req.user.role === "CUSTOMER") {
       if (booking.customerId !== req.user.userId) {
-        return res.status(403).json({ message: 'Not authorized to cancel this booking' })
+        return res.status(403).json({ message: "Not authorized to cancel this booking" })
       }
 
-      // Disallow cancellation if any technician has been assigned (primary or via bookingTechnicians)
-      const bk = await prisma.booking.findUnique({ where: { id: bookingId }, include: { bookingTechnicians: true } })
-      const hasPrimaryTech = !!bk.technicianId
-      const hasAssignedTechs = (bk.bookingTechnicians || []).length > 0
+      // Disallow cancellation if any technician has been assigned
+      const hasPrimaryTech = booking.technicianId != null
+      const hasAssignedTechs = (booking.bookingTechnicians || []).length > 0
+
       if (hasPrimaryTech || hasAssignedTechs) {
-        return res.status(400).json({ message: 'Booking cannot be cancelled after a technician has been assigned' })
+        return res
+          .status(400)
+          .json({ message: "Booking cannot be cancelled after a technician has been assigned" })
       }
     }
 
-    const updated = await prisma.booking.update({ where: { id: bookingId }, data: { status: "CANCELLED" } })
+    const updated = await prisma.booking.update({
+      where: { id: bookingId },
+      data: { status: "CANCELLED" },
+    })
 
     // Notify technician (if assigned) and admins
     try {
       const actorId = req.user.userId
+
       if (updated.technicianId && updated.technicianId !== actorId) {
         await prisma.notification.create({
           data: {
@@ -609,19 +627,22 @@ export async function cancelBooking(req, res) {
         })
       }
 
-      const admins = await prisma.user.findMany({ where: { role: 'ADMIN' } })
+      const admins = await prisma.user.findMany({ where: { role: "ADMIN" } })
       const adminNotifications = admins
-        .filter(a => a.id !== actorId)
-        .map(a => ({
+        .filter((a) => a.id !== actorId)
+        .map((a) => ({
           userId: a.id,
           title: `Booking #${updated.id} cancelled`,
           message: `Booking #${updated.id} was cancelled by the customer.`,
           meta: { bookingId: updated.id, cancelledBy: actorId },
           read: false,
         }))
-      if (adminNotifications.length > 0) await prisma.notification.createMany({ data: adminNotifications })
+
+      if (adminNotifications.length > 0) {
+        await prisma.notification.createMany({ data: adminNotifications })
+      }
     } catch (e) {
-      console.error('Failed to create cancel notifications', e)
+      console.error("Failed to create cancel notifications", e)
     }
 
     res.status(200).json({ message: "Booking cancelled successfully" })
@@ -630,6 +651,7 @@ export async function cancelBooking(req, res) {
     res.status(500).json({ error: "Something went wrong" })
   }
 }
+
 
 // Update booking (customer can edit notes/preferences before booking starts or before confirmed)
 export async function updateBooking(req, res) {

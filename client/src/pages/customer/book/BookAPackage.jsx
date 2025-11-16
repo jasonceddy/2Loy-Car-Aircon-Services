@@ -246,7 +246,7 @@ export default function BookAPackage() {
                         </div>
                     ) : (
                         <div className="mt-5 p-4 bg-yellow-50 rounded">
-                            <p className="font-medium">Consultation only — packages are not required for this booking.</p>
+                            <p className="font-medium">Consultation only</p>
                         </div>
                     )}
                 </div>
@@ -260,7 +260,7 @@ export default function BookAPackage() {
                         <div>
                             <h3 className="font-bold">Selected Package:</h3>
                             {bookingMode === 'consult' ? (
-                                <p className="font-medium">Consultation only — no package required.</p>
+                                <p className="font-medium">Consultation only.</p>
                             ) : selectedPackage ? (
                                 <div>
                                     <p>{selectedPackage.name}</p>

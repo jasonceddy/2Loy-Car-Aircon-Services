@@ -18,7 +18,7 @@ export default function QuoteCard({ quote, setQuoteCard }) {
       setLoading(false)
       setQuoteCard({ quote: null, open: false })
       navigate(0)
-      toast.success("Quote accepted successfully!")
+      toast.success("Billing accepted successfully!")
     } catch (error) {
       toast.error("Something went wrong!")
       setLoading(false)
@@ -37,7 +37,7 @@ export default function QuoteCard({ quote, setQuoteCard }) {
           {/* Header */}
           <div className="flex justify-between items-center">
             <h2 className="font-semibold text-lg flex items-center gap-2">
-              <FileText size={18} /> Quote
+              <FileText size={18} /> Billing
             </h2>
             <Badge
               className={
@@ -85,7 +85,7 @@ export default function QuoteCard({ quote, setQuoteCard }) {
                 {loading ? (
                   <Loader2 className="animate-spin" />
                 ) : (
-                  "Accept Quote"
+                  "Accept Billing"
                 )}
               </Button>
             </div>

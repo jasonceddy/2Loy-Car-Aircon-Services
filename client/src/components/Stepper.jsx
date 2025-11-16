@@ -161,7 +161,7 @@ export default function Stepper({ booking }) {
           {booking.quote && (
             <div className="mt-3 border-t pt-3">
               <h3 className="font-medium flex items-center gap-2">
-                <FileText size={16} /> Quote & Billing{" "}
+                <FileText size={16} /> Billing{" "}
                 <span
                   className={`px-3 py-1 text-xs rounded-full ${
                     booking.quote.status === "APPROVED"
@@ -182,7 +182,7 @@ export default function Stepper({ booking }) {
                     size="sm"
                     className="mt-2 flex items-center gap-2 cursor-pointer hover:scale-105 duration-200"
                   >
-                    <QuoteIcon size={16} /> Quote
+                    <QuoteIcon size={16} /> Billing
                   </Button>
                 </p>
               )}
